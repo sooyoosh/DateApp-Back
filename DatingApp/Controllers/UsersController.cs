@@ -6,13 +6,14 @@ using DatingApp.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace DatingApp.Controllers
 {
 
     [ApiController]
     [Route("api/users")]
-    //[Authorize]
+    [Authorize]
     public class UsersController:ControllerBase
     {
         private readonly IUserRepository _userRepository;
@@ -42,5 +43,18 @@ namespace DatingApp.Controllers
             }
             return Ok(user);
         }
+
+        [HttpPut]
+        public async Task<ActionResult> UpdateUser(MemberUpdateDto memberUpdateDto)
+        {
+            var username = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var user = await _userRepository.GetUserByUsernameAsync(username);
+            if (user == null) return BadRequest("Could not found User");
+            _mapper.Map(memberUpdateDto, user);
+            _userRepository.Update(user);
+            if(await _userRepository.SaveAllAsync()) return NoContent();
+            return BadRequest("fail to update");
+        }
+         
     }
 }
