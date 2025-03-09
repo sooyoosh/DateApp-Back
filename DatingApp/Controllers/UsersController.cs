@@ -18,10 +18,13 @@ namespace DatingApp.Controllers
     {
         private readonly IUserRepository _userRepository;
         private readonly IMapper _mapper;
-        public UsersController(IUserRepository userRepository,IMapper mapper)
+        private readonly IPhotoService _photoService;
+        public UsersController(IUserRepository userRepository,IMapper mapper, IPhotoService photoService)
         {
             _userRepository = userRepository;
             _mapper = mapper;
+            _photoService = photoService;
+
         }
 
         [HttpGet]
@@ -55,6 +58,39 @@ namespace DatingApp.Controllers
             if(await _userRepository.SaveAllAsync()) return NoContent();
             return BadRequest("fail to update");
         }
-         
+
+        //cloudinary
+        [HttpPost("photo/upload")]
+        public async Task<ActionResult<PhotoDto>> UploadPhoto([FromForm] IFormFile file)
+        {
+            var username = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var user = await _userRepository.GetUserByUsernameAsync(username);
+            if (user == null) return BadRequest("user not found");
+            var result = await _photoService.UploadPhotoAsync(file);
+            if (result.Error != null) return BadRequest(result.Error.Message);
+            var photo = new Photo
+            {
+                Url = result.SecureUrl.AbsoluteUri,
+                PublicId = result.PublicId,
+            };
+            user.Photos.Add(photo);
+            if (await _userRepository.SaveAllAsync())
+            {
+                return CreatedAtAction(nameof(GetUser), new {username=user.UserName},_mapper.Map<PhotoDto>(photo));
+            } //return _mapper.Map<PhotoDto>(photo);
+
+            return BadRequest("Problem To Uploading Image");
+        }
+
+        [HttpDelete("photo/delete/{publicId}")]
+        public async Task<IActionResult> DeletePhoto(string publicId)
+        {
+            var result = await _photoService.DeletePhotoAsync(publicId);
+            if (result.Result == "ok") return Ok(new { message = "Photo deleted successfully" });
+
+            return BadRequest("Failed to delete photo");
+        }
+
+
     }
 }
