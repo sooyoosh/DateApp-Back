@@ -122,7 +122,7 @@ namespace DatingApp.Controllers
                 if (result.Error != null) {return BadRequest(result.Error); } 
             }
             user.Photos.Remove(photo);  
-            if(await _userRepository.SaveAllAsync()) return Ok("Deleted");
+            if(await _userRepository.SaveAllAsync()) return Ok();
             return BadRequest("there is problem");
 
         }
