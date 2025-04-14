@@ -2,6 +2,8 @@
 using DatingApp.Data;
 using DatingApp.DTOs;
 using DatingApp.Entities;
+using DatingApp.Extensions;
+using DatingApp.Helpers;
 using DatingApp.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +16,7 @@ namespace DatingApp.Controllers
     [ApiController]
     [Route("api/users")]
     [Authorize]
+    [ServiceFilter(typeof(LogUserActivity))]
     public class UsersController:ControllerBase
     {
         private readonly IUserRepository _userRepository;
@@ -28,9 +31,11 @@ namespace DatingApp.Controllers
         }
 
         [HttpGet]
-        public async  Task<ActionResult<IEnumerable<MemberDto>>> GetUsers()
+        public async  Task<ActionResult<IEnumerable<MemberDto>>> GetUsers([FromQuery]UserParams userParams)
         {
-            var users = await _userRepository.GetMembersAsync();
+            userParams.CurrentUserName = User.GetUsername();
+            var users = await _userRepository.GetMembersAsync(userParams);
+            Response.AddPaginationHeader(users);
             return Ok(users);
         }
 
@@ -50,7 +55,7 @@ namespace DatingApp.Controllers
         [HttpPut]
         public async Task<ActionResult> UpdateUser(MemberUpdateDto memberUpdateDto)
         {
-            var username = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var username = User.GetUsername();
             var user = await _userRepository.GetUserByUsernameAsync(username);
             if (user == null) return BadRequest("Could not found User");
             _mapper.Map(memberUpdateDto, user);
@@ -63,7 +68,7 @@ namespace DatingApp.Controllers
         [HttpPost("photo/upload")]
         public async Task<ActionResult<PhotoDto>> UploadPhoto([FromForm] IFormFile file)
         {
-            var username = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var username = User.GetUsername();
             var user = await _userRepository.GetUserByUsernameAsync(username);
             if (user == null) return BadRequest("user not found");
             var result = await _photoService.UploadPhotoAsync(file);
@@ -95,7 +100,7 @@ namespace DatingApp.Controllers
         [HttpPut("set-main-photo/{photoId}")]
         public async Task<ActionResult> SetMainPhoto(int photoId)
         {
-            var username = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var username = User.GetUsername();
             var user = await _userRepository.GetUserByUsernameAsync(username);
             if (user == null) return BadRequest("Could not find user");
             var photo=user.Photos.FirstOrDefault(p => p.Id == photoId);
@@ -111,7 +116,7 @@ namespace DatingApp.Controllers
         [HttpDelete("delete-photo/{photoId}")]
         public async Task<ActionResult> DeletePhoto(int photoId)
         {
-            var username = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var username = User.GetUsername();
             var user = await _userRepository.GetUserByUsernameAsync(username);
             if (user == null) return BadRequest("Could not find user");
             var photo = user.Photos.FirstOrDefault(x => x.Id == photoId);
