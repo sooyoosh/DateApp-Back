@@ -18,6 +18,7 @@ namespace DatingApp.Extensions
             services.AddCors();
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IUserRepository, UserRepository > ();
+            services.AddScoped<ILikesRepository, LikesRepository> ();
             //cloudinary
             services.AddScoped<IPhotoService, PhotoService>();
             //cloudinary
