@@ -30,6 +30,8 @@ namespace DatingApp.Controllers
 
         }
 
+
+        
         [HttpGet]
         public async  Task<ActionResult<IEnumerable<MemberDto>>> GetUsers([FromQuery]UserParams userParams)
         {
