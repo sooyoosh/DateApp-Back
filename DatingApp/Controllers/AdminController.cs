@@ -28,7 +28,7 @@ namespace DatingApp.Controllers
                 .Select(x => new
                 {
                     x.Id,
-                    UserName = x.UserName,
+                    Username = x.UserName,
                     Roles = x.UserRoles.Select(x => x.Role.Name).ToList()
                 }).ToListAsync();
 
