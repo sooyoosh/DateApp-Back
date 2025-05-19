@@ -2,6 +2,7 @@ using DatingApp.Data;
 using DatingApp.Extensions;
 using DatingApp.Interfaces;
 using DatingApp.Services;
+using DatingApp.SignalR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -36,9 +37,14 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 
-app.UseCors(x=>x.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin());
+//app.UseCors(x=>x.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin().AllowCredentials());
+app.UseCors("CorsPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<PresenceHub>("hubs/presence");
+
+
+
 
 app.Run();

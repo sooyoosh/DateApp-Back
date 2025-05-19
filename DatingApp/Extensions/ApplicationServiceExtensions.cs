@@ -2,6 +2,7 @@
 using DatingApp.Helpers;
 using DatingApp.Interfaces;
 using DatingApp.Services;
+using DatingApp.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace DatingApp.Extensions
@@ -15,7 +16,18 @@ namespace DatingApp.Extensions
             {
                 options.UseSqlServer(configuration.GetConnectionString("myConnection"));
             });
-            services.AddCors();
+            services.AddCors(
+                options =>
+                {
+                    options.AddPolicy("CorsPolicy", policy =>
+                    {
+                        policy.WithOrigins("https://localhost:4200")
+                              .AllowAnyHeader()
+                              .AllowAnyMethod()
+                              .AllowCredentials();
+                    });
+                }
+                );
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IUserRepository, UserRepository > ();
             services.AddScoped<ILikesRepository, LikesRepository> ();
@@ -27,6 +39,8 @@ namespace DatingApp.Extensions
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
             services.Configure<CloudinarySettings>(
             configuration.GetSection("CloudinarySettings"));
+            services.AddSignalR();
+            services.AddSingleton<PresenceTracker>();
 
 
             return services;
