@@ -46,7 +46,7 @@ namespace DatingApp.Extensions
 
                         var path = context.HttpContext.Request.Path;
                         if (!string.IsNullOrEmpty(accessToken) &&
-                            path.StartsWithSegments("/hubs/presence"))
+                            path.StartsWithSegments("/hubs/presence") || path.StartsWithSegments("/hubs/message"))
                         {
                             context.Token = accessToken;
                         }
