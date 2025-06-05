@@ -15,9 +15,12 @@ namespace DatingApp.Controllers
     public class LikesController:ControllerBase
     {
         private readonly  ILikesRepository _likesRepository;
-        public LikesController(ILikesRepository likesRepository)
+        private readonly IUnitOfWork _unitOfWork;
+        public LikesController(ILikesRepository likesRepository, IUnitOfWork unitOfWork)
         {
             _likesRepository = likesRepository;
+            _unitOfWork = unitOfWork;
+
         }
 
 
@@ -26,11 +29,11 @@ namespace DatingApp.Controllers
         {
             var sourceUserId=User.GetUserId();
             if (sourceUserId == targetUserId) return BadRequest("you cannot like yourself");
-            var existingLike = await _likesRepository.GetUserLike(sourceUserId, targetUserId);
+            var existingLike = await _unitOfWork.LikesRepository.GetUserLike(sourceUserId, targetUserId);
             if (existingLike != null) {
-                _likesRepository.DeleteLike(existingLike);
+                _unitOfWork.LikesRepository.DeleteLike(existingLike);
 
-                if (await _likesRepository.SaveChanges()) return Ok();
+                if (await _unitOfWork.Complete()) return Ok();
 
             }
 
@@ -39,16 +42,16 @@ namespace DatingApp.Controllers
                 SourceUserId = sourceUserId,
                 TargetUserId = targetUserId,
             };
-            _likesRepository.AddLike(like);
+            _unitOfWork.LikesRepository.AddLike(like);
 
-            if (await _likesRepository.SaveChanges()) return Ok();
+            if (await _unitOfWork.Complete()) return Ok();
             return BadRequest("fail to like");
         }
 
         [HttpGet("likeList")]
         public async Task<ActionResult<IEnumerable<int>>> GetUserLIkeList()
         {
-            return Ok(await _likesRepository.GetCurrentUserLikeIda(User.GetUserId()));
+            return Ok(await _unitOfWork.LikesRepository.GetCurrentUserLikeIda(User.GetUserId()));
         }
 
         [HttpGet]
@@ -56,7 +59,7 @@ namespace DatingApp.Controllers
         {
             likesparams.UserId = User.GetUserId();
 
-            var users = await _likesRepository.GetUserLikes(likesparams);
+            var users = await _unitOfWork.LikesRepository.GetUserLikes(likesparams);
             Response.AddPaginationHeader(users);
             return Ok(users);
         }

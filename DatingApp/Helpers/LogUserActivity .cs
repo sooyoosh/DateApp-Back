@@ -21,10 +21,10 @@ namespace DatingApp.Helpers
             var userId = resultContext.HttpContext.User.GetUserId();
 
             // Get the repository
-            var repo = resultContext.HttpContext.RequestServices.GetService<IUserRepository>();
+            var unitOfWork = resultContext.HttpContext.RequestServices.GetService<IUnitOfWork>();
 
             // Find the user
-            var user = await repo.GetUserByIdAsync(userId);
+            var user = await unitOfWork.UserRepository.GetUserByIdAsync(userId);
 
             if (user == null) return;   
 
@@ -33,7 +33,7 @@ namespace DatingApp.Helpers
             user.LastActive = DateTime.UtcNow;
 
             // Save changes
-            await repo.SaveAllAsync();
+            await unitOfWork.Complete();
 
 
 

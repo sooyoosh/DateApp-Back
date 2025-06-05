@@ -19,14 +19,16 @@ namespace DatingApp.Controllers
     [ServiceFilter(typeof(LogUserActivity))]
     public class UsersController:ControllerBase
     {
-        private readonly IUserRepository _userRepository;
+        //private readonly IUserRepository _userRepository;
         private readonly IMapper _mapper;
         private readonly IPhotoService _photoService;
-        public UsersController(IUserRepository userRepository,IMapper mapper, IPhotoService photoService)
+        private readonly IUnitOfWork _unitOfWork;
+        public UsersController(IUserRepository userRepository,IMapper mapper, IPhotoService photoService,IUnitOfWork unitOfWork)
         {
-            _userRepository = userRepository;
+            //_userRepository = userRepository;
             _mapper = mapper;
             _photoService = photoService;
+            _unitOfWork = unitOfWork;
 
         }
 
@@ -36,7 +38,7 @@ namespace DatingApp.Controllers
         public async  Task<ActionResult<IEnumerable<MemberDto>>> GetUsers([FromQuery]UserParams userParams)
         {
             userParams.CurrentUserName = User.GetUsername();
-            var users = await _userRepository.GetMembersAsync(userParams);
+            var users = await _unitOfWork.UserRepository.GetMembersAsync(userParams);
             Response.AddPaginationHeader(users);
             return Ok(users);
         }
@@ -46,7 +48,7 @@ namespace DatingApp.Controllers
 
         public async Task<ActionResult<MemberDto>> GetUser(string username)
         {
-            var user = await _userRepository.GetMemberByUsernameAsync(username);
+            var user = await _unitOfWork.UserRepository.GetMemberByUsernameAsync(username);
             if (user == null)
             {
                 return NotFound("the user not found");
@@ -58,11 +60,11 @@ namespace DatingApp.Controllers
         public async Task<ActionResult> UpdateUser(MemberUpdateDto memberUpdateDto)
         {
             var username = User.GetUsername();
-            var user = await _userRepository.GetUserByUsernameAsync(username);
+            var user = await _unitOfWork.UserRepository.GetUserByUsernameAsync(username);
             if (user == null) return BadRequest("Could not found User");
             _mapper.Map(memberUpdateDto, user);
-            _userRepository.Update(user);
-            if(await _userRepository.SaveAllAsync()) return NoContent();
+            _unitOfWork.UserRepository.Update(user);
+            if(await _unitOfWork.Complete()) return NoContent();
             return BadRequest("fail to update");
         }
 
@@ -71,7 +73,7 @@ namespace DatingApp.Controllers
         public async Task<ActionResult<PhotoDto>> UploadPhoto([FromForm] IFormFile file)
         {
             var username = User.GetUsername();
-            var user = await _userRepository.GetUserByUsernameAsync(username);
+            var user = await _unitOfWork.UserRepository.GetUserByUsernameAsync(username);
             if (user == null) return BadRequest("user not found");
             var result = await _photoService.UploadPhotoAsync(file);
             if (result.Error != null) return BadRequest(result.Error.Message);
@@ -81,7 +83,7 @@ namespace DatingApp.Controllers
                 PublicId = result.PublicId,
             };
             user.Photos.Add(photo);
-            if (await _userRepository.SaveAllAsync())
+            if (await _unitOfWork.Complete())
             {
                 return CreatedAtAction(nameof(GetUser), new {username=user.UserName},_mapper.Map<PhotoDto>(photo));
             } //return _mapper.Map<PhotoDto>(photo);
@@ -103,14 +105,14 @@ namespace DatingApp.Controllers
         public async Task<ActionResult> SetMainPhoto(int photoId)
         {
             var username = User.GetUsername();
-            var user = await _userRepository.GetUserByUsernameAsync(username);
+            var user = await _unitOfWork.UserRepository.GetUserByUsernameAsync(username);
             if (user == null) return BadRequest("Could not find user");
             var photo=user.Photos.FirstOrDefault(p => p.Id == photoId);
             if (photo == null||photo.IsMain) return BadRequest("Cannot set main");
             var currentMain=user.Photos.FirstOrDefault(p=>p.IsMain);
             if (currentMain != null) currentMain.IsMain=false;
             photo.IsMain=true;
-            if (await _userRepository.SaveAllAsync()) return NoContent();
+            if (await _unitOfWork.Complete()) return NoContent();
 
             return BadRequest("there is problem to save it");
         }
@@ -119,7 +121,7 @@ namespace DatingApp.Controllers
         public async Task<ActionResult> DeletePhoto(int photoId)
         {
             var username = User.GetUsername();
-            var user = await _userRepository.GetUserByUsernameAsync(username);
+            var user = await _unitOfWork.UserRepository.GetUserByUsernameAsync(username);
             if (user == null) return BadRequest("Could not find user");
             var photo = user.Photos.FirstOrDefault(x => x.Id == photoId);
             if (photo == null || photo.IsMain) return BadRequest("photo cannot be delete");
@@ -129,7 +131,7 @@ namespace DatingApp.Controllers
                 if (result.Error != null) {return BadRequest(result.Error); } 
             }
             user.Photos.Remove(photo);  
-            if(await _userRepository.SaveAllAsync()) return Ok();
+            if(await _unitOfWork.Complete()) return Ok();
             return BadRequest("there is problem");
 
         }
